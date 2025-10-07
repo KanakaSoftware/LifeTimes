@@ -1,0 +1,17 @@
+{
+  "name": "k6",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test-conditional-service-basic": "k6 run ./conditional-service/basic-test.js",
+    "test-conditional-service-load": "k6 run ./conditional-service/load-test.js",
+    "test-timed-service-basic": "k6 run ./timed-service/basic-test.js",
+    "test-timed-service-load": "k6 run ./timed-service/load-test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/k6": "^1.2.0"
+  }
+}
