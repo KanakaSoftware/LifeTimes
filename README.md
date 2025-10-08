@@ -6,7 +6,7 @@
 
 **Timed Lifetime** – Services that automatically expire after a specified duration or interval.
 
-**LifeTimes** seamlessly integrates with *Microsoft.Extensions.DependencyInjection* and follows the same familiar patterns, making it easy to adopt in ASP.NET Core, console apps, or any DI-enabled .NET project.
+*LifeTimes* seamlessly integrates with *Microsoft.Extensions.DependencyInjection* and follows the same familiar patterns, making it easy to adopt in ASP.NET Core, console apps, or any DI-enabled .NET project.
 
 ## Installation
 
@@ -73,6 +73,7 @@ If you have a specific question about this project, open a issue with *question*
 
 ## Workitems
 
-- [ ] CI/CD
-- [ ] Interfaces support
-- [ ] Async support
+- [ ] #4
+- [ ] #1
+- [ ] #2
+- [ ] #3
