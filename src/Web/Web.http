@@ -1,0 +1,14 @@
+@web_host = https://localhost:7232
+# @web_host = http://localhost:5155
+
+### Timed LifeTime
+GET {{web_host}}/timed-service
+
+### Timed LifeTime Delay
+GET {{web_host}}/timed-service-delay?delay=600
+
+### Conditioned Service
+GET {{web_host}}/conditional-service
+
+### Force GC clean up
+GET {{web_host}}/gc-clean
