@@ -6,9 +6,9 @@
 
 **Timed Lifetime** – Services that automatically expire after a specified duration or interval.
 
-*LifeTimes* seamlessly integrates with *Microsoft.Extensions.DependencyInjection* and follows the same familiar patterns, making it easy to adopt in ASP.NET Core, console apps, or any DI-enabled .NET project.
+*LifeTimes* seamlessly integrates with *Microsoft.Extensions.DependencyInjection* and follows the same familiar patterns, making it easy to adopt in ASP.NET Core, console apps, or any DI-enabled .NET Core project.
 
-## Installation
+## 🔨 Installation
 
 LifeTimes is available on [NuGet](https://www.nuget.org/packages/KanakaSoftware.LifeTimes).
 
@@ -16,7 +16,7 @@ LifeTimes is available on [NuGet](https://www.nuget.org/packages/KanakaSoftware.
 dotnet add package KanakaSoftware.LifeTimes
 ```
 
-## Usage
+## 🧩 Usage
 
 The following code demonstrates basic usage of LifeTimes. For a full tutorial see sample [Web](src/Web) project in the repository.
 
@@ -66,14 +66,39 @@ class TokenService : IConditional
     }
 }
 ```
+## 🏗️ Working Detail
 
-## Getting support
+`ILifeTime` is registered in the the application's DI container. It maintains an internal DI container to manage user-configured service objects. `ITypeLifeTime<T>`(generic) is a singleton in the internal DI, handling scope creation and disposal of it's service.
+
+```mermaid
+graph LR
+    subgraph O[Application DI]
+        O1["ILifeTime
+        (Singleton)"]
+        subgraph I["LifeTimes DI"]
+            I1["ITypeLifeTime&lt;CurrencyService&gt;
+            (Singleton)"]
+            I11["CurrencyService
+            (Scoped)"]
+            I2["ITypeLifeTime&lt;TokenService&gt;
+            (Singleton)"]
+            I21["TokenService
+            (Scoped)"]
+        end
+    end
+    O1 e1@--> I
+    I1 e2@--> I11
+    I2 e3@--> I21
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+```
+
+## 💡 Inspiration
+
+The idea for this library came from the podcast [Episode of a Lifetime](https://www.breakpoint.show/podcast/episode-036-episode-of-a-lifetime/) and a blog post by [Andrew Lock](https://andrewlock.net/going-beyond-singleton-scoped-and-transient-lifetimes/), which highlighted four additional service lifetimes beyond the standard DI scopes.
+
+## 🤝 Getting support
 
 If you have a specific question about this project, open a issue with *question* label. If you encounter a bug or would like to request a feature, submit an issue.
 
-## Workitems
-
-- [ ] #4
-- [ ] #1
-- [ ] #2
-- [ ] #3
