@@ -1,4 +1,4 @@
-name: build
+name: build & test
 
 on:
   push:
@@ -16,6 +16,15 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - '.github/workflows/**'
+      - 'src/**'
+      - 'test/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'LifeTimes.slnx'
+      - 'nuget.config'
   workflow_dispatch:
 
 permissions: {}
