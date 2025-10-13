@@ -13,10 +13,11 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://kanakasoftware.com</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl></RepositoryUrl>
+    <RepositoryUrl>https://github.com/KanakaSoftware/LifeTimes</RepositoryUrl>
     <PackageIcon>icon-128.png</PackageIcon>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Copyright>Copyright (c) Kanaka Software.</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
