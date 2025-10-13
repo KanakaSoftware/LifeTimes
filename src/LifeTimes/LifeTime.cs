@@ -25,7 +25,7 @@ internal sealed class LifeTime : ILifeTime, IDisposable
         var configuration = rootServiceProvider.GetRequiredService<ILifeTimeOptionsConfiguration>();
 
         // Configure the builder using the retrieved configuration
-        configuration.Configure(rootServiceProvider, buidler);
+        configuration.Configure(rootServiceProvider, builder);
 
         // Build the internal service provider using the configured options
         var options = builder.Options;
