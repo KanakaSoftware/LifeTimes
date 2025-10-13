@@ -57,20 +57,15 @@ internal sealed class ConditionalTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable
         if (_disposed)
             throw new ObjectDisposedException(nameof(ConditionalTypeLifeTime<T>));
 
-        _lock.EnterReadLock();
-        try
-        {
-            if (_cts == null)
-            {
-                throw new InvalidOperationException("CancellationToken not initialized.");
-            }
-            return _cts.Token;
-        }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
+        // Fast read without lock
+        var cts = _cts;
+        if (cts == null)
+            throw new InvalidOperationException(
+                "CancellationToken not initialized. Call GetInstance() first to initialize the instance.");
+
+        return cts.Token;
     }
+
 
     /// <summary>
     /// Gets the service instance, creating a new one if condition is true or no instance exists yet.
@@ -81,56 +76,55 @@ internal sealed class ConditionalTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable
         if (_disposed)
             throw new ObjectDisposedException(nameof(ConditionalTypeLifeTime<T>));
 
-        bool shouldRecreate = default;
         T? instance;
 
+        // Fast read: check if instance exists and if condition passes
         _lock.EnterReadLock();
         try
         {
-            instance = _serviceScope?.ServiceProvider.GetRequiredService<T>();
-            shouldRecreate = instance == null || instance.Condition();
+            instance = _serviceScope?.ServiceProvider.GetService<T>();
+            if (instance != null && !instance.Condition())
+            {
+                return instance;
+            }
         }
         finally
         {
             _lock.ExitReadLock();
         }
 
-        // If the scope needs to be recreated, proceed with an upgradeable lock.
-        if (shouldRecreate)
+        // Slow path: recreate the scope if instance is null or condition fails
+        _lock.EnterUpgradeableReadLock();
+        try
         {
-            _lock.EnterUpgradeableReadLock();
-            try
+            // Double-check inside upgradeable lock
+            instance = _serviceScope?.ServiceProvider.GetService<T>();
+            if (instance == null || instance.Condition())
             {
-                // Double-check in case another thread already created the scope.
-                instance = _serviceScope?.ServiceProvider.GetRequiredService<T>();
-                shouldRecreate = instance == null || instance.Condition();
-                if (shouldRecreate)
+                _lock.EnterWriteLock();
+                try
                 {
-                    _lock.EnterWriteLock();
-                    try
-                    {
-                        // Dispose resources
-                        _cts?.Cancel();
-                        _cts?.Dispose();
-                        _serviceScope?.Dispose();
+                    // Dispose previous resources
+                    _cts?.Cancel();
+                    _cts?.Dispose();
+                    _serviceScope?.Dispose();
 
-                        // Create a new service scope and cancellation token source.
-                        _serviceScope = _serviceProvider.CreateScope();
-                        _cts = new CancellationTokenSource();
-                    }
-                    finally
-                    {
-                        _lock.ExitWriteLock();
-                    }
+                    // Create a new scope and cancellation token
+                    _serviceScope = _serviceProvider.CreateScope();
+                    _cts = new CancellationTokenSource();
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
                 }
             }
-            finally
-            {
-                _lock.ExitUpgradeableReadLock();
-            }
+        }
+        finally
+        {
+            _lock.ExitUpgradeableReadLock();
         }
 
-        // Return the required service from the current scope
+        // Return the required service from the current (new) scope
         _lock.EnterReadLock();
         try
         {
