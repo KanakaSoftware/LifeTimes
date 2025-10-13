@@ -66,20 +66,13 @@ internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where
         if (_disposed)
             throw new ObjectDisposedException(nameof(TimedTypeLifeTime<T>));
 
-        _lock.EnterReadLock();
-        try
-        {
-            if (_cts == null)
-            {
-                throw new InvalidOperationException("CancellationToken not initialized.");
-            }
-            return _cts.Token;
-        }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
+        var cts = _cts;
+        if (cts == null)
+            throw new InvalidOperationException("CancellationToken not initialized. Call GetInstance() first.");
+
+        return cts.Token;
     }
+
 
     /// <summary>
     /// Gets the service instance, creating a new one if the previous has expired or no instance exists yet.
@@ -90,87 +83,75 @@ internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where
         if (_disposed)
             throw new ObjectDisposedException(nameof(TimedTypeLifeTime<T>));
 
-        bool shouldRecreate = default;
+        T? instance;
 
+        // Fast path: read lock only, returns if instance exists and token not expired
         _lock.EnterReadLock();
         try
         {
-            shouldRecreate = _serviceScope == null || _cts!.IsCancellationRequested;
+            instance = _serviceScope?.ServiceProvider.GetService<T>();
+            if (instance != null && !_cts!.IsCancellationRequested)
+            {
+                return instance;
+            }
         }
         finally
         {
             _lock.ExitReadLock();
         }
 
-        if (shouldRecreate)
+        // Slow path: upgradeable read lock to safely recreate scope
+        _lock.EnterUpgradeableReadLock();
+        try
         {
-            _lock.EnterUpgradeableReadLock();
-            try
+            // Double-check inside lock
+            instance = _serviceScope?.ServiceProvider.GetService<T>();
+            if (instance == null || _cts!.IsCancellationRequested)
             {
-                // Double-check in case another thread already created the scope.
-                shouldRecreate = _serviceScope == null || _cts!.IsCancellationRequested;
-                if (shouldRecreate)
+                _lock.EnterWriteLock();
+                try
                 {
-                    _lock.EnterWriteLock();
-                    try
+                    // Dispose previous resources
+                    _ctRegistration?.Dispose();
+                    _cts?.Cancel();
+                    _cts?.Dispose();
+                    _serviceScope?.Dispose();
+
+                    // Create new cancellation token and scope
+                    _cts = new CancellationTokenSource(_interval);
+                    _serviceScope = _serviceProvider.CreateScope();
+
+                    // Register callback to clean up when token expires
+                    _ctRegistration = _cts.Token.Register(() =>
                     {
-                        // Dispose previous callback and resources.
-                        _ctRegistration?.Dispose();
-                        _cts?.Cancel();
-                        _cts?.Dispose();
-                        _serviceScope?.Dispose();
-
-                        // Create a new cancellation token source with the specified interval.
-                        _cts = new CancellationTokenSource(_interval);
-
-                        // Create a new service scope for the instance.
-                        _serviceScope = _serviceProvider.CreateScope();
-
-                        // Register a callback to clean up resources when the token is cancelled.
-                        _ctRegistration = _cts.Token.Register(() =>
+                        _lock.EnterWriteLock();
+                        try
                         {
-                            _lock.EnterWriteLock();
-                            try
-                            {
-                                // Dispose callback and resources.
-                                _ctRegistration?.Dispose();
-                                _ctRegistration = null;
-                                _cts?.Dispose();
-                                _cts = null;
-                                _serviceScope?.Dispose();
-                                _serviceScope = null;
-                            }
-                            finally
-                            {
-                                _lock.ExitWriteLock();
-                            }
-                        });
-                    }
-                    finally
-                    {
-                        _lock.ExitWriteLock();
-                    }
+                            _ctRegistration?.Dispose();
+                            _ctRegistration = null;
+                            _cts?.Dispose();
+                            _cts = null;
+                            _serviceScope?.Dispose();
+                            _serviceScope = null;
+                        }
+                        finally
+                        {
+                            _lock.ExitWriteLock();
+                        }
+                    });
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
                 }
             }
-            finally
-            {
-                _lock.ExitUpgradeableReadLock();
-            }
-        }
-
-        // Return the required service from the current scope.
-        _lock.EnterReadLock();
-        try
-        {
-            // Handle the rare case where the callback disposed the scope after the check above.
-            if (_serviceScope == null)
-                return GetInstance();
-
-            return _serviceScope!.ServiceProvider.GetRequiredService<T>();
         }
         finally
         {
-            _lock.ExitReadLock();
+            _lock.ExitUpgradeableReadLock();
         }
+
+        // Return instance from current scope (guaranteed to exist here)
+        return _serviceScope!.ServiceProvider.GetRequiredService<T>();
     }
 }

@@ -19,16 +19,16 @@ internal sealed class LifeTime : ILifeTime, IDisposable
     /// <param name="rootServiceProvider">The root service provider from application DI container.</param>
     public LifeTime(IServiceProvider rootServiceProvider)
     {
-        var buidler = new LifeTimeOptionsBuilder();
+        var builder = new LifeTimeOptionsBuilder();
 
         // Retrieve the configuration for options from the root service provider
         var configuration = rootServiceProvider.GetRequiredService<ILifeTimeOptionsConfiguration>();
 
         // Configure the builder using the retrieved configuration
-        configuration.Configure(rootServiceProvider, buidler);
+        configuration.Configure(rootServiceProvider, builder);
 
         // Build the internal service provider using the configured options
-        var options = buidler.Options;
+        var options = builder.Options;
         _serviceProvider = options.ServiceCollection.Value.BuildServiceProvider();
     }
 
