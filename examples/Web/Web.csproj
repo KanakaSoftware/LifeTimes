@@ -7,6 +7,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../LifeTimes/LifeTimes.csproj" />
+    <ProjectReference Include="../../src/LifeTimes/LifeTimes.csproj" />
   </ItemGroup>
 </Project>
