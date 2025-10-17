@@ -1,8 +1,8 @@
 using LifeTimes;
 
-namespace web.Services;
+namespace Web.Services;
 
-public class ConditionedService : IDisposable, IAsyncDisposable, IConditional
+public class ConditionedService : IConditionedService, IDisposable, IAsyncDisposable
 {
     private readonly List<Customer> _customers = new List<Customer>();
     private readonly HttpClient _httpClient;

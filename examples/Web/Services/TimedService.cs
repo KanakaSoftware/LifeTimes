@@ -1,7 +1,6 @@
+namespace Web.Services;
 
-namespace web.Services;
-
-public class TimedService : IDisposable, IAsyncDisposable
+public class TimedService : ITimedService, IDisposable, IAsyncDisposable
 {
     private readonly List<Customer> _customers = new List<Customer>();
     public int GetValue(int count, CancellationToken ct = default)
