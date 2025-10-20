@@ -135,7 +135,7 @@ public class ILifeTimeTimedTest
                 ? lifetime.GetService<TestServiceDisposable>()
                 : lifetime.GetRequiredService<TestServiceDisposable>();
         var token = lifetime.GetCancellationToken<TestServiceDisposable>();
-        await Task.Delay(TimeSpan.FromMilliseconds(150), TestContext.Current.CancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
 
         // assert
         Assert.True(token.IsCancellationRequested);

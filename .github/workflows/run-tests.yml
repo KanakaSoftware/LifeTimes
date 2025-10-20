@@ -28,6 +28,7 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
+      fail-fast: false
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
