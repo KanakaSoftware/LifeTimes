@@ -1,5 +1,5 @@
 using LifeTimes;
-using web.Services;
+using Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,8 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddLifeTime((p, o) =>
         {
-            o.AddTimed<TimedService>(p, TimeSpan.FromSeconds(10));
-            o.AddConditional<ConditionedService>(p);
+            o.AddTimed<ITimedService, TimedService>(p, TimeSpan.FromSeconds(10));
+            o.AddConditional<IConditionedService, ConditionedService>(p);
         }
     );
 
@@ -37,7 +37,7 @@ app.Run();
 
 static IResult GetTimedService(ILifeTime lifeTime, int? count = 1)
 {
-    var service = lifeTime.GetService<TimedService>();
+    var service = lifeTime.GetService<ITimedService>();
     if (service == null)
     {
         return TypedResults.NotFound();
@@ -48,8 +48,8 @@ static IResult GetTimedService(ILifeTime lifeTime, int? count = 1)
 
 static async Task<IResult> GetTimedServiceDelay(ILifeTime lifeTime, int? delay = 1)
 {
-    var service = lifeTime.GetRequiredService<TimedService>();
-    var ct = lifeTime.GetCancellationToken<TimedService>();
+    var service = lifeTime.GetRequiredService<ITimedService>();
+    var ct = lifeTime.GetCancellationToken<ITimedService>();
     await Task.Delay(TimeSpan.FromSeconds(delay!.Value), ct);
     var code = service.GetValue(1);
     return TypedResults.Ok(code);
@@ -57,8 +57,8 @@ static async Task<IResult> GetTimedServiceDelay(ILifeTime lifeTime, int? delay =
 
 static IResult GetConditionalService(ILifeTime lifeTime, int? count = 1)
 {
-    var service = lifeTime.GetService<ConditionedService>();
-    var ct = lifeTime.GetCancellationToken<ConditionedService>();
+    var service = lifeTime.GetService<IConditionedService>();
+    var ct = lifeTime.GetCancellationToken<IConditionedService>();
     if (service == null)
     {
         return TypedResults.NotFound();

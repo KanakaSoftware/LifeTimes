@@ -43,54 +43,115 @@ public class LifeTimeOptionsBuilder
     }
 
     /// <summary>
-    /// Adds a timed lifetime for the specified type <typeparamref name="T"/>.
+    /// Adds a timed lifetime for the specified type <typeparamref name="TService"/>.
     /// </summary>
-    /// <typeparam name="T">The type to register.</typeparam>
-    /// <param name="serviceProvider">The service provider used to create instances of <typeparamref name="T"/>.</param>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <param name="serviceProvider">The service provider used to create instances of <typeparamref name="TService"/>.</param>
     /// <param name="interval">The time interval for the timed lifetime.</param>
     /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
-    public LifeTimeOptionsBuilder AddTimed<T>(IServiceProvider serviceProvider, TimeSpan interval) where T : class
+    public LifeTimeOptionsBuilder AddTimed<TService>(IServiceProvider serviceProvider, TimeSpan interval)
+        where TService : class
     {
-        return AddTimed<T>(() => ActivatorUtilities.CreateInstance<T>(serviceProvider), interval);
+        return AddTimed<TService, TService>(serviceProvider, interval);
     }
 
     /// <summary>
-    /// Adds a timed lifetime for the specified type <typeparamref name="T"/> using the provided factory method.
+    /// Adds a timed lifetime for the specified type <typeparamref name="TService"/>.
     /// </summary>
-    /// <typeparam name="T">The type to register.</typeparam>
-    /// <param name="factory">A factory delegate to create instances of <typeparamref name="T"/>.</param>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <typeparam name="TImplementation">The type of the implementation to use.</typeparam>
+    /// <param name="serviceProvider">The service provider used to create instances of <typeparamref name="TService"/>.</param>
     /// <param name="interval">The time interval for the timed lifetime.</param>
     /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
-    public LifeTimeOptionsBuilder AddTimed<T>(Func<T> factory, TimeSpan interval) where T : class
+    public LifeTimeOptionsBuilder AddTimed<TService, TImplementation>(IServiceProvider serviceProvider, TimeSpan interval)
+        where TService : class
+        where TImplementation : class, TService
     {
-        _options.ServiceCollection.Value.AddSingleton<ITypeLifeTime<T>>(serviceProvider => new TimedTypeLifeTime<T>(serviceProvider, interval));
-        _options.ServiceCollection.Value.AddScoped<T>(serviceProvider => factory());
+        return AddTimed<TService, TImplementation>(() => ActivatorUtilities.CreateInstance<TImplementation>(serviceProvider), interval);
+    }
+
+    /// <summary>
+    /// Adds a timed lifetime for the specified type <typeparamref name="TService"/> using the provided factory method.
+    /// </summary>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <param name="factory">A factory delegate to create instances of <typeparamref name="TService"/>.</param>
+    /// <param name="interval">The time interval for the timed lifetime.</param>
+    /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
+    public LifeTimeOptionsBuilder AddTimed<TService>(Func<TService> factory, TimeSpan interval)
+        where TService : class
+    {
+        return AddTimed<TService, TService>(factory, interval);
+    }
+
+
+    /// <summary>
+    /// Adds a timed lifetime for the specified type <typeparamref name="TService"/> using the provided factory method.
+    /// </summary>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <param name="factory">A factory delegate to create instances of <typeparamref name="TService"/>.</param>
+    /// <param name="interval">The time interval for the timed lifetime.</param>
+    /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
+    public LifeTimeOptionsBuilder AddTimed<TService, TImplementation>(Func<TImplementation> factory, TimeSpan interval)
+        where TService : class
+        where TImplementation: class, TService
+    {
+        _options.ServiceCollection.Value.AddSingleton<ITypeLifeTime<TService>>(serviceProvider => new TimedTypeLifeTime<TService>(serviceProvider, interval));
+        _options.ServiceCollection.Value.AddScoped<TService>(serviceProvider => factory());
         return this;
     }
 
     /// <summary>
-    /// Adds a conditional lifetime for the specified type <typeparamref name="T"/>.
+    /// Adds a conditional lifetime for the specified type <typeparamref name="TService"/>.
     /// </summary>
-    /// <typeparam name="T">The type to register.</typeparam>
-    /// <param name="serviceProvider">The service provider used to create instances of <typeparamref name="T"/>.</param>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <param name="serviceProvider">The service provider used to create instances of <typeparamref name="TService"/>.</param>
     /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
-    public LifeTimeOptionsBuilder AddConditional<T>(IServiceProvider serviceProvider)
-        where T : class, IConditional
+    public LifeTimeOptionsBuilder AddConditional<TService>(IServiceProvider serviceProvider)
+        where TService : class, IConditional
     {
-        return AddConditional<T>(() => ActivatorUtilities.CreateInstance<T>(serviceProvider));
+        return AddConditional<TService,TService>(serviceProvider);
     }
 
     /// <summary>
-    /// Adds a conditional lifetime for the specified type <typeparamref name="T"/>.
+    /// Adds a conditional lifetime for the specified type <typeparamref name="TService"/>.
     /// </summary>
-    /// <typeparam name="T">The type to register.</typeparam>
-    /// <param name="factory">A factory delegate to create instances of <typeparamref name="T"/>.</param>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <typeparam name="TImplementation">The type of the implementation to use.</typeparam>
+    /// <param name="serviceProvider">The service provider used to create instances of <typeparamref name="TService"/>.</param>
     /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
-    public LifeTimeOptionsBuilder AddConditional<T>(Func<T> factory)
-        where T : class, IConditional
+    public LifeTimeOptionsBuilder AddConditional<TService, TImplementation>(IServiceProvider serviceProvider)
+        where TService : class, IConditional
+        where TImplementation: class, TService
     {
-        _options.ServiceCollection.Value.AddSingleton<ITypeLifeTime<T>>(serviceProvider => new ConditionalTypeLifeTime<T>(serviceProvider));
-        _options.ServiceCollection.Value.AddScoped<T>(serviceProvider => factory());
+        return AddConditional<TService, TImplementation>(() => ActivatorUtilities.CreateInstance<TImplementation>(serviceProvider));
+    }
+
+
+    /// <summary>
+    /// Adds a conditional lifetime for the specified type <typeparamref name="TService"/>.
+    /// </summary>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <param name="factory">A factory delegate to create instances of <typeparamref name="TService"/>.</param>
+    /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
+    public LifeTimeOptionsBuilder AddConditional<TService>(Func<TService> factory)
+        where TService : class, IConditional
+    {
+        return AddConditional<TService, TService>(factory);
+    }
+
+    /// <summary>
+    /// Adds a conditional lifetime for the specified type <typeparamref name="TService"/>.
+    /// </summary>
+    /// <typeparam name="TService">The type of the service to register.</typeparam>
+    /// <typeparam name="TImplementation">The type of the implementation to use.</typeparam>
+    /// <param name="factory">A factory delegate to create instances of <typeparamref name="TService"/>.</param>
+    /// <returns>The current <see cref="LifeTimeOptionsBuilder"/> instance.</returns>
+    public LifeTimeOptionsBuilder AddConditional<TService, TImplementation>(Func<TImplementation> factory)
+        where TService : class, IConditional
+        where TImplementation : class, TService
+    {
+        _options.ServiceCollection.Value.AddSingleton<ITypeLifeTime<TService>>(serviceProvider => new ConditionalTypeLifeTime<TService>(serviceProvider));
+        _options.ServiceCollection.Value.AddScoped<TService>(serviceProvider => factory());
         return this;
     }
 }
