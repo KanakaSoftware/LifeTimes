@@ -1,0 +1,44 @@
+version: 2
+registries:
+  nuget-official-registry:
+    type: nuget-feed
+    url: https://api.nuget.org/v3/index.json
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: weekly
+      time: '09:00'
+      timezone: 'Asia/Kolkata'
+  - package-ecosystem: 'nuget'
+    directory: '/'
+    registries:
+      - nuget-official-registry
+    schedule:
+      interval: weekly
+      time: '09:00'
+      timezone: 'Asia/Kolkata'
+    groups:
+      Test:
+        patterns:
+          - 'xunit.*'
+          - 'Microsoft.NET.Test.Sdk'
+      AspNetCore:
+        patterns:
+          - 'Microsoft.AspNetCore.*'
+      MicrosoftExtensions:
+        patterns:
+          - 'Microsoft.Extensions.*'
+  - package-ecosystem: 'dotnet-sdk'
+    directory: '/'
+    schedule:
+      interval: weekly
+      time: '09:00'
+      timezone: 'Asia/Kolkata'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-patch
+          - version-update:semver-minor
+
+

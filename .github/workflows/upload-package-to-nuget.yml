@@ -1,0 +1,82 @@
+name: Upload Package to NuGet
+
+on:
+  release:
+    types:
+      released
+
+permissions: {}
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: true
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: 1
+  NUGET_XMLDOC_MODE: skip
+  TERM: xterm
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name : Checkout
+        uses: actions/checkout@v5
+        with:
+          show-progress: false
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: './global.json'
+
+      - name: .NET information
+        run: dotnet --info
+
+      - name: Package project
+        run: dotnet pack './src/LifeTimes/LifeTimes.csproj' -c Release --include-symbols -o './artifacts'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs
+          path: './artifacts'
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+    steps:
+      - name : Checkout
+        uses: actions/checkout@v5
+        with:
+          show-progress: false
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: './global.json'
+
+      - name: .NET information
+        run: dotnet --info
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: nupkgs
+          path: './artifacts'
+
+      - name: NuGet login
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: venkatrushivanga
+
+      - name: Upload NuGet Package
+        run: dotnet nuget push './artifacts/*.nupkg' --api-key '${{ steps.nuget-login.outputs.NUGET_API_KEY }}'
+

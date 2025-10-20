@@ -1,30 +1,12 @@
-name: build & test
+name: Run tests
 
 on:
   push:
     branches:
       - main
-    paths:
-      - '.github/workflows/**'
-      - 'src/**'
-      - 'test/**'
-      - 'Directory.Build.props'
-      - 'Directory.Packages.props'
-      - 'global.json'
-      - 'LifeTimes.slnx'
-      - 'nuget.config'
   pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/**'
-      - 'src/**'
-      - 'test/**'
-      - 'Directory.Build.props'
-      - 'Directory.Packages.props'
-      - 'global.json'
-      - 'LifeTimes.slnx'
-      - 'nuget.config'
   workflow_dispatch:
 
 permissions: {}
@@ -39,7 +21,7 @@ env:
   TERM: xterm
 
 jobs:
-  build:
+  run-tests:
     strategy:
       matrix:
         os:
@@ -62,12 +44,14 @@ jobs:
         with:
           global-json-file: './global.json'
 
-      - name: Print dotnet information
+      - name: .NET information
         run: dotnet --info
 
-      - name: Build solution
-        run: dotnet build -c Release
-
       - name: Run test
-        working-directory: './test/LifeTimes.Tests'
-        run: dotnet test -c Release --no-build
+        run: dotnet test './test/LifeTimes.Tests/LifeTimes.Tests.csproj' --logger 'trx;LogFileName=unit-tests.trx' -c Release --results-directory './artifacts'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: './artifacts'
