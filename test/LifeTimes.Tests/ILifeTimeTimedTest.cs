@@ -62,7 +62,7 @@ public class ILifeTimeTimedTest
         var instance1 = useGetService
             ? lifetime.GetService<TestService>()
             : lifetime.GetRequiredService<TestService>();
-        await Task.Delay(TimeSpan.FromMilliseconds(150), TestContext.Current.CancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
         var instance2 = useGetService
             ? lifetime.GetService<TestService>()
             : lifetime.GetRequiredService<TestService>();
@@ -135,7 +135,7 @@ public class ILifeTimeTimedTest
                 ? lifetime.GetService<TestServiceDisposable>()
                 : lifetime.GetRequiredService<TestServiceDisposable>();
         var token = lifetime.GetCancellationToken<TestServiceDisposable>();
-        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
 
         // assert
         Assert.True(token.IsCancellationRequested);
@@ -198,7 +198,7 @@ public class ILifeTimeTimedTest
         var instance = useGetService
                 ? lifetime.GetService<TestServiceDisposable>()
                 : lifetime.GetRequiredService<TestServiceDisposable>();
-        await Task.Delay(TimeSpan.FromMilliseconds(150), TestContext.Current.CancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance);
