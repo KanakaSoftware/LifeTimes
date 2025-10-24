@@ -18,7 +18,7 @@ dotnet add package Kanaka.LifeTimes
 
 ## 🧩 Usage
 
-The following code demonstrates basic usage of LifeTimes. For a full tutorial see sample [Web](examples/Web) project in the repository.
+The following code demonstrates basic usage of LifeTimes. For a full tutorial see sample [Web](https://github.com/KanakaSoftware/LifeTimes/blob/main/examples/Web) project in the repository.
 
 ```csharp
 ServiceCollection services = new();
@@ -66,33 +66,12 @@ class TokenService : IConditional
     }
 }
 ```
+
 ## 🏗️ Working Detail
 
 `ILifeTime` is registered in the the application's DI container. It maintains an internal DI container to manage user-configured service objects. `ITypeLifeTime<T>`(generic) is a singleton in the internal DI, handling scope creation and disposal of it's service.
 
-```mermaid
-graph LR
-    subgraph O[Application DI]
-        O1["ILifeTime
-        (Singleton)"]
-        subgraph I["LifeTimes DI"]
-            I1["ITypeLifeTime&lt;CurrencyService&gt;
-            (Singleton)"]
-            I11["CurrencyService
-            (Scoped)"]
-            I2["ITypeLifeTime&lt;TokenService&gt;
-            (Singleton)"]
-            I21["TokenService
-            (Scoped)"]
-        end
-    end
-    O1 e1@--> I
-    I1 e2@--> I11
-    I2 e3@--> I21
-    e1@{ animate: true }
-    e2@{ animate: true }
-    e3@{ animate: true }
-```
+![Working Detail](https://github.com/KanakaSoftware/LifeTimes/blob/main/images/working-detail.svg)
 
 ## 💡 Inspiration
 
@@ -101,4 +80,3 @@ The idea for this library came from the podcast [Episode of a Lifetime](https://
 ## 🤝 Getting support
 
 If you have a specific question about this project, open a issue with *question* label. If you encounter a bug or would like to request a feature, submit an issue.
-
