@@ -10,15 +10,15 @@
 
 ## 🔨 Installation
 
-LifeTimes is available on [NuGet](https://www.nuget.org/packages/KanakaSoftware.LifeTimes).
+LifeTimes is available on [NuGet](https://www.nuget.org/packages/Kanaka.LifeTimes).
 
 ```text
-dotnet add package KanakaSoftware.LifeTimes
+dotnet add package Kanaka.LifeTimes
 ```
 
 ## 🧩 Usage
 
-The following code demonstrates basic usage of LifeTimes. For a full tutorial see sample [Web](src/Web) project in the repository.
+The following code demonstrates basic usage of LifeTimes. For a full tutorial see sample [Web](examples/Web) project in the repository.
 
 ```csharp
 ServiceCollection services = new();
