@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Kanaka.LifeTimes</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Title>LifeTimes</Title>
     <Product>Kanaka Software</Product>
     <Description>LifeTimes is a lightweight library that extends the built-in
