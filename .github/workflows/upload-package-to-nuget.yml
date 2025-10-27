@@ -40,7 +40,7 @@ jobs:
         run: dotnet pack './src/LifeTimes/LifeTimes.csproj' -c Release --include-symbols -o './artifacts'
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: nupkgs
           path: './artifacts'
