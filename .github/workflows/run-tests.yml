@@ -52,7 +52,7 @@ jobs:
         run: dotnet test './test/LifeTimes.Tests/LifeTimes.Tests.csproj' --logger 'trx;LogFileName=unit-tests.trx' -c Release --results-directory './artifacts'
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-${{ matrix.os }}
           path: './artifacts'
