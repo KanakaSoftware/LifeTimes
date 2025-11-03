@@ -71,7 +71,7 @@ class TokenService : IConditional
 
 `ILifeTime` is registered in the the application's DI container. It maintains an internal DI container to manage user-configured service objects. `ITypeLifeTime<T>`(generic) is a singleton in the internal DI, handling scope creation and disposal of it's service.
 
-![Working Detail](https://github.com/KanakaSoftware/LifeTimes/blob/main/images/working-detail.svg)
+![Working Detail](https://raw.githubusercontent.com/KanakaSoftware/LifeTimes/main/images/working-detail.png)
 
 ## 💡 Inspiration
 
