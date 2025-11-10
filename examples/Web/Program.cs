@@ -20,11 +20,11 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseHttpsRedirection();
 
-app.MapGet("/timed-service", GetTimedService);
+app.MapGet("/timed-service", GetTimedServiceAsync);
 
-app.MapGet("/timed-service-delay", GetTimedServiceDelay);
+app.MapGet("/timed-service-delay", GetTimedServiceDelayAsync);
 
-app.MapGet("/conditional-service", GetConditionalService);
+app.MapGet("/conditional-service", GetConditionalServiceAsync);
 
 app.MapGet("/gc-clean", () =>
 {
@@ -35,9 +35,9 @@ app.MapGet("/gc-clean", () =>
 
 app.Run();
 
-static IResult GetTimedService(ILifeTime lifeTime, int? count = 1)
+static async Task<IResult> GetTimedServiceAsync(CancellationToken cancellationToken, ILifeTime lifeTime, int? count = 1)
 {
-    var service = lifeTime.GetService<ITimedService>();
+    var service = await lifeTime.GetServiceAsync<ITimedService>(cancellationToken);
     if (service == null)
     {
         return TypedResults.NotFound();
@@ -46,18 +46,18 @@ static IResult GetTimedService(ILifeTime lifeTime, int? count = 1)
     return TypedResults.Ok(code);
 }
 
-static async Task<IResult> GetTimedServiceDelay(ILifeTime lifeTime, int? delay = 1)
+static async Task<IResult> GetTimedServiceDelayAsync(CancellationToken cancellationToken, ILifeTime lifeTime, int? delay = 1)
 {
-    var service = lifeTime.GetRequiredService<ITimedService>();
+    var service = await lifeTime.GetRequiredServiceAsync<ITimedService>(cancellationToken);
     var ct = lifeTime.GetCancellationToken<ITimedService>();
     await Task.Delay(TimeSpan.FromSeconds(delay!.Value), ct);
     var code = service.GetValue(1);
     return TypedResults.Ok(code);
 }
 
-static IResult GetConditionalService(ILifeTime lifeTime, int? count = 1)
+static async Task<IResult> GetConditionalServiceAsync(CancellationToken cancellationToken, ILifeTime lifeTime, int? count = 1)
 {
-    var service = lifeTime.GetService<IConditionedService>();
+    var service = await lifeTime.GetServiceAsync<IConditionedService>();
     var ct = lifeTime.GetCancellationToken<IConditionedService>();
     if (service == null)
     {

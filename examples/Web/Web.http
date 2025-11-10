@@ -5,7 +5,7 @@
 GET {{web_host}}/timed-service
 
 ### Timed LifeTime Delay
-GET {{web_host}}/timed-service-delay?delay=600
+GET {{web_host}}/timed-service-delay?delay=1
 
 ### Conditioned Service
 GET {{web_host}}/conditional-service

@@ -6,33 +6,37 @@ namespace LifeTimes;
 public interface ILifeTime
 {
     /// <summary>
-    /// Retrieves a service object of the specified type, or <see langword="null"/> if it is not available.
+    /// Retrieves a service object of the specified type asynchronously, or <see langword="null"/> if it is not available.
     /// </summary>
     /// <typeparam name="T">The type of the service object to retrieve.</typeparam>
+    /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
     /// <returns>
-    /// An instance of <typeparamref name="T"/> if available; otherwise, <see langword="null"/>.
+    /// A ValueTask that represents an instance of <typeparamref name="T"/> if available; otherwise, <see langword="null"/>.
     /// </returns>
-    /// <seealso cref="GetRequiredService{T}"/>
-    public T? GetService<T>() where T : class;
+    /// <seealso cref="GetRequiredServiceAsync{T}"/>
+    public ValueTask<T?> GetServiceAsync<T>(CancellationToken cancellationToken = default) where T : class;
+
 
     /// <summary>
-    /// Retrieves a service object of the specified type.
+    /// Retrieves a service object of the specified type asynchronously.
     /// </summary>
     /// <typeparam name="T">The type of the service object to retrieve.</typeparam>
+    /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
     /// <returns>
-    /// An instance of <typeparamref name="T"/>.
+    /// A ValueTask that represents an instance of <typeparamref name="T"/>.
     /// </returns>
     /// <exception cref="System.InvalidOperationException">
     /// Thrown if no service object of type <typeparamref name="T"/> is found.
     /// </exception>
     /// <seealso cref="GetService{T}"/>
-    public T GetRequiredService<T>() where T : class;
+    public ValueTask<T> GetRequiredServiceAsync<T>(CancellationToken cancellationToken = default) where T : class;
+
 
     /// <summary>
     /// Gets the <see cref="CancellationToken"/> associated with the service object of the specified type.
     /// </summary>
     /// <remarks>
-    /// This is useful when the service object implements <see cref="IDisposable"/> or requires cancellation support.
+    /// This is useful when the service object implements <see cref="IDisposable"/>, <see cref="IAsyncDisposable"/> or requires cancellation support.
     /// </remarks>
     /// <typeparam name="T">The type of the service object whose <see cref="CancellationToken"/> is requested.</typeparam>
     /// <returns>

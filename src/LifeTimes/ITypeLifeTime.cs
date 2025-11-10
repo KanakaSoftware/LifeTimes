@@ -8,12 +8,13 @@ public interface ITypeLifeTime<T> where T : class
 {
     /// <summary>
     /// Retrieves an instance of the service object of type <typeparamref name="T"/>
-    /// according to the configured lifetime policy (e.g., timed, tenant, pool).
+    /// according to the configured lifetime policy asynchronously (e.g. timed, conditional).
     /// </summary>
-    /// <returns>
-    /// An instance of type <typeparamref name="T"/>.
+    /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
+    /// <returns> A ValueTask that represents an instance of type <typeparamref name="T"/>.
     /// </returns>
-    public T GetInstance();
+    public ValueTask<T> GetInstanceAsync(CancellationToken cancellationToken = default);
+
 
     /// <summary>
     /// Retrieves the <see cref="CancellationToken"/> associated with the service object

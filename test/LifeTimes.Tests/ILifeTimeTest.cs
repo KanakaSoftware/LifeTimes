@@ -9,13 +9,17 @@ public class ILifeTimeTest
     }
     private class TestServiceTrueCondition : IConditional
     {
-        public bool Condition() => true;
+        public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken) => ValueTask.FromResult<bool>(true);
     }
-    private class TestServiceDisposable : IDisposable
+    private class TestServiceDisposable : IAsyncDisposable
     {
         public bool _disposed = false;
 
-        public void Dispose() => _disposed = true;
+        public ValueTask DisposeAsync()
+        {
+            _disposed = true;
+            return ValueTask.CompletedTask;
+        }
     }
     private interface ITestServiceInterface
     {
@@ -28,11 +32,11 @@ public class ILifeTimeTest
     }
     private class TestServiceTrueConditionInterface : ITestServiceTrueConditionInterface
     {
-        public bool Condition() => true;
+        public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken) => ValueTask.FromResult<bool>(true);
     }
 
     [Fact]
-    public void GetService_ReturnsNull()
+    public async Task GetService_ReturnsNull()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -41,14 +45,14 @@ public class ILifeTimeTest
 
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
-        var instance = lifetime.GetService<TestService>();
+        var instance = await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.Null(instance);
     }
 
     [Fact]
-    public void GetRequiredService_ThrowsInvalidOperationException()
+    public async Task GetRequiredService_ThrowsInvalidOperationException()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -59,7 +63,7 @@ public class ILifeTimeTest
         var lifetime = provider.GetRequiredService<ILifeTime>();
 
         // assert
-        Assert.Throws<InvalidOperationException>(() => lifetime.GetRequiredService<TestService>());
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -80,7 +84,7 @@ public class ILifeTimeTest
     }
 
     [Fact]
-    public void Methods_WhenDisposed_ThrowsObjectDisposedException()
+    public async Task Methods_WhenDisposed_ThrowsObjectDisposedException()
     {
         // arrange
         var services = new ServiceCollection();
@@ -91,16 +95,16 @@ public class ILifeTimeTest
 
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
-        provider.Dispose();
+        await provider.DisposeAsync();
 
         // assert
-        Assert.Throws<ObjectDisposedException>(() => lifetime.GetService<TestService>());
-        Assert.Throws<ObjectDisposedException>(() => lifetime.GetRequiredService<TestService>());
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken));
         Assert.Throws<ObjectDisposedException>(() => lifetime.GetCancellationToken<TestService>());
     }
 
     [Fact]
-    public void GetService_ReturnsIntance()
+    public async Task GetService_ReturnsIntance()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -114,8 +118,8 @@ public class ILifeTimeTest
 
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
-        var instance1 = lifetime.GetService<TestService>();
-        var instance2 = lifetime.GetService<TestServiceTrueCondition>();
+        var instance1 = await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken);
+        var instance2 = await lifetime.GetServiceAsync<TestServiceTrueCondition>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -123,7 +127,7 @@ public class ILifeTimeTest
     }
 
     [Fact]
-    public void GetService_WithInterface_ReturnsIntance()
+    public async Task GetService_WithInterface_ReturnsIntance()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -137,8 +141,8 @@ public class ILifeTimeTest
 
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
-        var instance1 = lifetime.GetService<ITestServiceInterface>();
-        var instance2 = lifetime.GetService<ITestServiceTrueConditionInterface>();
+        var instance1 = await lifetime.GetServiceAsync<ITestServiceInterface>(TestContext.Current.CancellationToken);
+        var instance2 = await lifetime.GetServiceAsync<ITestServiceTrueConditionInterface>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -146,7 +150,7 @@ public class ILifeTimeTest
     }
 
     [Fact]
-    public void Get_WithJustInterface_ThrowsInvalidOperationException()
+    public async Task Get_WithJustInterface_ThrowsInvalidOperationException()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -162,12 +166,12 @@ public class ILifeTimeTest
         var lifetime = provider.GetRequiredService<ILifeTime>();
 
         // assert
-        Assert.Throws<InvalidOperationException>(() => lifetime.GetRequiredService<ITestServiceInterface>());
-        Assert.Throws<InvalidOperationException>(() => lifetime.GetRequiredService<ITestServiceTrueConditionInterface>());
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await lifetime.GetRequiredServiceAsync<ITestServiceInterface>(TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await lifetime.GetRequiredServiceAsync<ITestServiceTrueConditionInterface>(TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void GetService_WithFactory_ReturnsIntance()
+    public async Task GetService_WithFactory_ReturnsIntance()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -181,8 +185,8 @@ public class ILifeTimeTest
 
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
-        var instance1 = lifetime.GetService<TestService>();
-        var instance2 = lifetime.GetService<TestServiceTrueCondition>();
+        var instance1 = await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken);
+        var instance2 = await lifetime.GetServiceAsync<TestServiceTrueCondition>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -190,7 +194,7 @@ public class ILifeTimeTest
     }
 
     [Fact]
-    public void GetService_WithFactoryAndInterface_ReturnsIntance()
+    public async Task GetService_WithFactoryAndInterface_ReturnsIntance()
     {
         // arrrange
         var services = new ServiceCollection();
@@ -204,8 +208,8 @@ public class ILifeTimeTest
 
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
-        var instance1 = lifetime.GetService<ITestServiceInterface>();
-        var instance2 = lifetime.GetService<ITestServiceTrueConditionInterface>();
+        var instance1 = await lifetime.GetServiceAsync<ITestServiceInterface>(TestContext.Current.CancellationToken);
+        var instance2 = await lifetime.GetServiceAsync<ITestServiceTrueConditionInterface>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
