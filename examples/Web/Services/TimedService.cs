@@ -1,6 +1,6 @@
 namespace Web.Services;
 
-public class TimedService : ITimedService, IDisposable, IAsyncDisposable
+public class TimedService : ITimedService, IAsyncDisposable
 {
     private readonly List<Customer> _customers = new List<Customer>();
     public int GetValue(int count, CancellationToken ct = default)
@@ -20,14 +20,9 @@ public class TimedService : ITimedService, IDisposable, IAsyncDisposable
         return GetHashCode();
     }
 
-    public void Dispose()
-    {
-        Console.WriteLine($"{nameof(TimedService)} {GetHashCode()} Destorying...");
-    }
-
     public ValueTask DisposeAsync()
     {
-        Console.WriteLine($"{nameof(TimedService)} {GetHashCode()} Async Destorying...");
+        Console.WriteLine($"{nameof(TimedService)} {GetHashCode()} Destorying...");
         return default;
     }
 }

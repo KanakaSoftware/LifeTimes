@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LifeTimes.Types;
@@ -9,17 +8,21 @@ public class ILifeTimeTimedTest
     {
     }
 
-    private class TestServiceDisposable : IDisposable
+    private class TestServiceDisposable : IAsyncDisposable
     {
         public bool _disposed = false;
 
-        public void Dispose() => _disposed = true;
+        public ValueTask DisposeAsync()
+        {
+            _disposed = true;
+            return ValueTask.CompletedTask;
+        }
     }
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Get_ReturnsSameInstanceWithinInterval(bool useGetService)
+    public async Task Get_ReturnsSameInstanceWithinInterval(bool useGetService)
     {
         // arrange
         var services = new ServiceCollection();
@@ -32,11 +35,11 @@ public class ILifeTimeTimedTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance1 = useGetService
-            ? lifetime.GetService<TestService>()
-            : lifetime.GetRequiredService<TestService>();
+            ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken);
         var instance2 = useGetService
-            ? lifetime.GetService<TestService>()
-            : lifetime.GetRequiredService<TestService>();
+            ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -60,12 +63,12 @@ public class ILifeTimeTimedTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance1 = useGetService
-            ? lifetime.GetService<TestService>()
-            : lifetime.GetRequiredService<TestService>();
+            ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken);
         await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
         var instance2 = useGetService
-            ? lifetime.GetService<TestService>()
-            : lifetime.GetRequiredService<TestService>();
+            ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -76,7 +79,7 @@ public class ILifeTimeTimedTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void GetCancellationToken_ReturnsCancellationToken(bool useGetService)
+    public async Task GetCancellationToken_ReturnsCancellationToken(bool useGetService)
     {
         // arrange
         var services = new ServiceCollection();
@@ -89,8 +92,8 @@ public class ILifeTimeTimedTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance = useGetService
-            ? lifetime.GetService<TestService>()
-            : lifetime.GetRequiredService<TestService>();
+            ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken);
         var token = lifetime.GetCancellationToken<TestService>();
 
         // assert
@@ -132,8 +135,8 @@ public class ILifeTimeTimedTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance = useGetService
-                ? lifetime.GetService<TestServiceDisposable>()
-                : lifetime.GetRequiredService<TestServiceDisposable>();
+                ? await lifetime.GetServiceAsync<TestServiceDisposable>(TestContext.Current.CancellationToken)
+                : await lifetime.GetRequiredServiceAsync<TestServiceDisposable>(TestContext.Current.CancellationToken);
         var token = lifetime.GetCancellationToken<TestServiceDisposable>();
         await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
 
@@ -144,7 +147,7 @@ public class ILifeTimeTimedTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Get_IsThreadSafe(bool useGetService)
+    public async Task Get_IsThreadSafe(bool useGetService)
     {
 
         // arrange
@@ -158,20 +161,20 @@ public class ILifeTimeTimedTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         TestService? instance1 = null, instance2 = null;
-        Parallel.Invoke(
-            () =>
-            {
-                instance1 = useGetService
-                    ? lifetime.GetService<TestService>()
-                    : lifetime.GetRequiredService<TestService>();
-            },
-            () =>
-            {
-                instance2 = useGetService
-                    ? lifetime.GetService<TestService>()
-                    : lifetime.GetRequiredService<TestService>();
-            }
-        );
+        var tasks = new[]
+        {
+            Task.Run(
+                async () =>
+                    instance1 = useGetService
+                        ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+                        : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken)),
+            Task.Run(
+                async () =>
+                    instance2 = useGetService
+                        ? await lifetime.GetServiceAsync<TestService>(TestContext.Current.CancellationToken)
+                        : await lifetime.GetRequiredServiceAsync<TestService>(TestContext.Current.CancellationToken))
+        };
+        await Task.WhenAll(tasks);
 
         // assert
         Assert.NotNull(instance1);
@@ -196,8 +199,8 @@ public class ILifeTimeTimedTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance = useGetService
-                ? lifetime.GetService<TestServiceDisposable>()
-                : lifetime.GetRequiredService<TestServiceDisposable>();
+                ? await lifetime.GetServiceAsync<TestServiceDisposable>(TestContext.Current.CancellationToken)
+                : await lifetime.GetRequiredServiceAsync<TestServiceDisposable>(TestContext.Current.CancellationToken);
         await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
 
         // assert

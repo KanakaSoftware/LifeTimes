@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LifeTimes.Types;
@@ -7,27 +6,31 @@ public class ILifeTimeConditionalTest
 {
     private class TestServiceTrueCondition : IConditional
     {
-        public bool Condition() => true;
+        public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken) => ValueTask.FromResult<bool>(true);
     }
 
     private class TestServiceFlaseCondition : IConditional
     {
-        public bool Condition() => false;
+        public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken) => ValueTask.FromResult<bool>(false);
     }
 
-    private class TestServiceDisposableTrueCondition : IDisposable, IConditional
+    private class TestServiceDisposableTrueCondition : IAsyncDisposable, IConditional
     {
         public bool _disposed = false;
 
-        public bool Condition() => true;
+        public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken) => ValueTask.FromResult<bool>(true);
 
-        public void Dispose() => _disposed = true;
+        public ValueTask DisposeAsync()
+        {
+            _disposed = true;
+            return ValueTask.CompletedTask;
+        }
     }
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Get_ReturnsSameInstance_WhenConditionFalse(bool useGetService)
+    public async Task Get_ReturnsSameInstance_WhenConditionFalse(bool useGetService)
     {
         // arrange
         var services = new ServiceCollection();
@@ -40,11 +43,11 @@ public class ILifeTimeConditionalTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance1 = useGetService
-            ? lifetime.GetService<TestServiceFlaseCondition>()
-            : lifetime.GetRequiredService<TestServiceFlaseCondition>();
+            ? await lifetime.GetServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken);
         var instance2 = useGetService
-            ? lifetime.GetService<TestServiceFlaseCondition>()
-            : lifetime.GetRequiredService<TestServiceFlaseCondition>();
+            ? await lifetime.GetServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -55,7 +58,7 @@ public class ILifeTimeConditionalTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Get_ReturnsNewInstance_WhenConditionTrue(bool useGetService)
+    public async Task Get_ReturnsNewInstance_WhenConditionTrue(bool useGetService)
     {
         // arrange
         var services = new ServiceCollection();
@@ -68,11 +71,11 @@ public class ILifeTimeConditionalTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance1 = useGetService
-            ? lifetime.GetService<TestServiceTrueCondition>()
-            : lifetime.GetRequiredService<TestServiceTrueCondition>();
+            ? await lifetime.GetServiceAsync<TestServiceTrueCondition>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestServiceTrueCondition>(TestContext.Current.CancellationToken);
         var instance2 = useGetService
-            ? lifetime.GetService<TestServiceTrueCondition>()
-            : lifetime.GetRequiredService<TestServiceTrueCondition>();
+            ? await lifetime.GetServiceAsync<TestServiceTrueCondition>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestServiceTrueCondition>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);
@@ -83,7 +86,7 @@ public class ILifeTimeConditionalTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void GetCancellationToken_ReturnsCancellationToken(bool useGetService)
+    public async Task GetCancellationToken_ReturnsCancellationToken(bool useGetService)
     {
         // arrange
         var services = new ServiceCollection();
@@ -96,8 +99,8 @@ public class ILifeTimeConditionalTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance = useGetService
-            ? lifetime.GetService<TestServiceFlaseCondition>()
-            : lifetime.GetRequiredService<TestServiceFlaseCondition>();
+            ? await lifetime.GetServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken)
+            : await lifetime.GetRequiredServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken);
         var token = lifetime.GetCancellationToken<TestServiceFlaseCondition>();
 
         // assert
@@ -125,7 +128,7 @@ public class ILifeTimeConditionalTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void GetCancellationToken_IsTokenCancelled(bool useGetService)
+    public async Task GetCancellationToken_IsTokenCancelled(bool useGetService)
     {
 
         // arrange
@@ -139,12 +142,12 @@ public class ILifeTimeConditionalTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance1 = useGetService
-                ? lifetime.GetService<TestServiceDisposableTrueCondition>()
-                : lifetime.GetRequiredService<TestServiceDisposableTrueCondition>();
+                ? await lifetime.GetServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken)
+                : await lifetime.GetRequiredServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken);
         var token = lifetime.GetCancellationToken<TestServiceDisposableTrueCondition>();
         var instance2 = useGetService
-                ? lifetime.GetService<TestServiceDisposableTrueCondition>()
-                : lifetime.GetRequiredService<TestServiceDisposableTrueCondition>();
+                ? await lifetime.GetServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken)
+                : await lifetime.GetRequiredServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.True(token.IsCancellationRequested);
@@ -153,7 +156,7 @@ public class ILifeTimeConditionalTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Get_IsThreadSafe(bool useGetService)
+    public async Task Get_IsThreadSafe(bool useGetService)
     {
 
         // arrange
@@ -167,20 +170,20 @@ public class ILifeTimeConditionalTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         TestServiceFlaseCondition? instance1 = null, instance2 = null;
-        Parallel.Invoke(
-            () =>
-            {
-                instance1 = useGetService
-                    ? lifetime.GetService<TestServiceFlaseCondition>()
-                    : lifetime.GetRequiredService<TestServiceFlaseCondition>();
-            },
-            () =>
-            {
-                instance2 = useGetService
-                    ? lifetime.GetService<TestServiceFlaseCondition>()
-                    : lifetime.GetRequiredService<TestServiceFlaseCondition>();
-            }
-        );
+        var tasks = new[]
+        {
+            Task.Run(
+                async () =>
+                    instance1 = useGetService
+                        ? await lifetime.GetServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken)
+                        : await lifetime.GetRequiredServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken)),
+            Task.Run(
+                async () =>
+                    instance2 = useGetService
+                        ? await lifetime.GetServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken)
+                        : await lifetime.GetRequiredServiceAsync<TestServiceFlaseCondition>(TestContext.Current.CancellationToken))
+        };
+        await Task.WhenAll(tasks);
 
         // assert
         Assert.NotNull(instance1);
@@ -191,7 +194,7 @@ public class ILifeTimeConditionalTest
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Get_IsServiceDisposed(bool useGetService)
+    public async Task Get_IsServiceDisposed(bool useGetService)
     {
 
         // arrange
@@ -205,11 +208,11 @@ public class ILifeTimeConditionalTest
         // act
         var lifetime = provider.GetRequiredService<ILifeTime>();
         var instance1 = useGetService
-                ? lifetime.GetService<TestServiceDisposableTrueCondition>()
-                : lifetime.GetRequiredService<TestServiceDisposableTrueCondition>();
+                ? await lifetime.GetServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken)
+                : await lifetime.GetRequiredServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken);
         var instance2 = useGetService
-                ? lifetime.GetService<TestServiceDisposableTrueCondition>()
-                : lifetime.GetRequiredService<TestServiceDisposableTrueCondition>();
+                ? await lifetime.GetServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken)
+                : await lifetime.GetRequiredServiceAsync<TestServiceDisposableTrueCondition>(TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(instance1);

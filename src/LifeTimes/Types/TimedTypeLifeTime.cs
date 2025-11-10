@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.Threading;
+using IAsyncDisposable = System.IAsyncDisposable;
 
 namespace LifeTimes.Types;
 
@@ -6,7 +8,7 @@ namespace LifeTimes.Types;
 /// An implementation of <see cref="ITypeLifeTime{T}"/> that provides a timed lifetime for a service instance,
 /// using a <see cref="CancellationToken"/> to control expiration.
 /// </summary>
-internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where T : class
+internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable, IAsyncDisposable where T : class
 {
     // The duration after which the service instance expires.
     private readonly TimeSpan _interval;
@@ -15,16 +17,18 @@ internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where
     private readonly IServiceProvider _serviceProvider;
 
     // Synchronization primitive for thread-safe creation and disposal of the service instance.
-    private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
+#pragma warning disable VSTHRD012 // Provide JoinableTaskFactory where allowed
+    private readonly AsyncReaderWriterLock _lock = new AsyncReaderWriterLock();
+#pragma warning restore VSTHRD012 // Provide JoinableTaskFactory where allowed
 
     // The current service scope holding the instance.
-    private IServiceScope? _serviceScope;
+    private AsyncServiceScope? _serviceScope;
 
     // The cancellation token source that triggers expiration.
     private CancellationTokenSource? _cts;
 
     // Registration for the cancellation callback.
-    private CancellationTokenRegistration? _ctRegistration;
+    private CancellationTokenRegistration _ctRegistration = default;
 
     private bool _disposed = default;
 
@@ -39,21 +43,29 @@ internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where
         if (_disposed)
             return;
 
-        _lock.EnterWriteLock();
-        try
-        {
-            _ctRegistration?.Dispose();
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _serviceScope?.Dispose();
-        }
-        finally
-        {
-            _lock.ExitWriteLock();
-            _lock.Dispose();
-        }
+        _lock.Dispose();
+        _cts?.Dispose();
+        _ctRegistration.Dispose();
+        if (_serviceScope is { } scope)
+            scope.Dispose();
 
         _disposed = true;
+        GC.SuppressFinalize(this);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+
+        _lock.Dispose();
+        _cts?.Dispose();
+        await _ctRegistration.DisposeAsync();
+        if (_serviceScope is { } scope)
+            await scope.DisposeAsync();
+
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -78,16 +90,17 @@ internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where
     /// Gets the service instance, creating a new one if the previous has expired or no instance exists yet.
     /// </summary>
     /// <returns>The service instance of type <typeparamref name="T"/>.</returns>
-    public T GetInstance()
+    public async ValueTask<T> GetInstanceAsync(CancellationToken cancellationToken = default)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(TimedTypeLifeTime<T>));
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         T? instance;
 
         // Fast path: read lock only, returns if instance exists and token not expired
-        _lock.EnterReadLock();
-        try
+        using (await _lock.ReadLockAsync(cancellationToken))
         {
             instance = _serviceScope?.ServiceProvider.GetService<T>();
             if (instance != null && !_cts!.IsCancellationRequested)
@@ -95,63 +108,59 @@ internal sealed class TimedTypeLifeTime<T> : ITypeLifeTime<T>, IDisposable where
                 return instance;
             }
         }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
 
         // Slow path: upgradeable read lock to safely recreate scope
-        _lock.EnterUpgradeableReadLock();
-        try
+        using (await _lock.UpgradeableReadLockAsync(cancellationToken))
         {
             // Double-check inside lock
             instance = _serviceScope?.ServiceProvider.GetService<T>();
             if (instance == null || _cts!.IsCancellationRequested)
             {
-                _lock.EnterWriteLock();
-                try
+                using (await _lock.WriteLockAsync(cancellationToken))
                 {
                     // Dispose previous resources
-                    _ctRegistration?.Dispose();
-                    _cts?.Cancel();
-                    _cts?.Dispose();
-                    _serviceScope?.Dispose();
+                    await _ctRegistration.DisposeAsync();
+                    if (_cts != null)
+                    {
+                        await _cts.CancelAsync();
+                        _cts.Dispose();
+                    }
+                    if (_serviceScope is { } scope)
+                        await scope.DisposeAsync();
 
                     // Create new cancellation token and scope
                     _cts = new CancellationTokenSource(_interval);
-                    _serviceScope = _serviceProvider.CreateScope();
+                    _serviceScope = _serviceProvider.CreateAsyncScope();
 
                     // Register callback to clean up when token expires
                     _ctRegistration = _cts.Token.Register(() =>
                     {
-                        _lock.EnterWriteLock();
-                        try
+                        _ = Task.Run(async () =>
                         {
-                            _ctRegistration?.Dispose();
-                            _ctRegistration = null;
-                            _cts?.Dispose();
-                            _cts = null;
-                            _serviceScope?.Dispose();
-                            _serviceScope = null;
-                        }
-                        finally
-                        {
-                            _lock.ExitWriteLock();
-                        }
+                            using (await _lock.WriteLockAsync())
+                            {
+                                await _ctRegistration.DisposeAsync();
+                                _ctRegistration = default;
+                                _cts?.Dispose();
+                                _cts = null;
+                                if (_serviceScope is { } scope)
+                                    await scope.DisposeAsync();
+                                _serviceScope = null;
+                            }
+                        });
                     });
-                }
-                finally
-                {
-                    _lock.ExitWriteLock();
                 }
             }
         }
-        finally
-        {
-            _lock.ExitUpgradeableReadLock();
-        }
 
-        // Return instance from current scope (guaranteed to exist here)
-        return _serviceScope!.ServiceProvider.GetRequiredService<T>();
+        // Return instance from current scope
+        using (await _lock.ReadLockAsync(cancellationToken))
+        {
+            if (_serviceScope is { } scope)
+                return scope.ServiceProvider.GetRequiredService<T>();
+
+            // Handle the rare case where the callback disposed the scope after the check above.
+            return await GetInstanceAsync();
+        }
     }
 }

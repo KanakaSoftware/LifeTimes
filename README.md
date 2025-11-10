@@ -4,7 +4,7 @@
 
 **Conditional Lifetime** – Automatically creates or disposes services based on given condition.
 
-**Timed Lifetime** – Services that automatically expire after a specified duration or interval.
+**Timed Lifetime** – Services that automatically dispose after a specified duration or interval.
 
 *LifeTimes* seamlessly integrates with *Microsoft.Extensions.DependencyInjection* and follows the same familiar patterns, making it easy to adopt in ASP.NET Core, console apps, or any DI-enabled .NET Core project.
 
@@ -31,11 +31,10 @@ services
     );
 using ServiceProvider provider = services.BuildServiceProvider();
 var lifetime = provider.GetService<ILifeTime>();
-var currencyService = lifetime.GetService<CurrencyService>();
+var currencyService = await lifetime.GetServiceAsync<CurrencyService>();
 var rate = currencyService.GetRate("INR");
-var tokenService = lifetime.GetService<TokenService>();
+var tokenService = await lifetime.GetServiceAsync<TokenService>();
 var token = tokenService.GetToken();
-
 
 class CurrencyService
 {
@@ -59,10 +58,11 @@ class TokenService : IConditional
     {
         return token;
     }
-    public bool Condition()
+
+    public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken)
     {
         var expired = false; // check token expire, for demonstration it's set to false
-        return expired;
+        return ValueTask.FromResult<bool>(expired);
     }
 }
 ```

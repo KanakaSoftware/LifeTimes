@@ -2,7 +2,7 @@ using LifeTimes;
 
 namespace Web.Services;
 
-public class ConditionedService : IConditionedService, IDisposable, IAsyncDisposable
+public class ConditionedService : IConditionedService, IDisposable
 {
     private readonly List<Customer> _customers = new List<Customer>();
     private readonly HttpClient _httpClient;
@@ -34,17 +34,10 @@ public class ConditionedService : IConditionedService, IDisposable, IAsyncDispos
         Console.WriteLine($"{nameof(ConditionedService)} {GetHashCode()} Destorying...");
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask<bool> ConditionAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine($"{nameof(ConditionedService)} {GetHashCode()} Async Destorying...");
-        return default;
-    }
-
-    public bool Condition()
-    {
-        var response = _httpClient.GetAsync($"http://localhost:3000/condition").GetAwaiter()
-            .GetResult();
+        var response = await _httpClient.GetAsync($"http://localhost:3000/condition", cancellationToken);
         response.EnsureSuccessStatusCode();
-        return bool.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        return bool.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
     }
 }
