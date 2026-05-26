@@ -1,70 +1,44 @@
 # LifeTimes
 
-**LifeTimes** is a lightweight library that extends the built-in *Microsoft.DependencyInjection* lifetimes. It provides additional lifetimes for your services, which includes:
+**LifeTimes** is a lightweight, high-performance extension library for the built-in `Microsoft.Extensions.DependencyInjection` framework. It empowers developers to define dynamic, state-aware, and time-bound lifetimes for service resolutions in .NET.
 
-**Conditional Lifetime** – Automatically creates or disposes services based on given condition.
+---
 
-**Timed Lifetime** – Services that automatically dispose after a specified duration or interval.
+## ⚡ The DI Gap: Why Do We Need LifeTimes?
 
-*LifeTimes* seamlessly integrates with *Microsoft.Extensions.DependencyInjection* and follows the same familiar patterns, making it easy to adopt in ASP.NET Core, console apps, or any DI-enabled .NET Core project.
+The default Microsoft DI container is simple, fast, and robust. However, it only supports three rigid, static lifetimes:
+
+1. **Transient**: Recreated on *every* resolution. (Can result in excessive allocations for heavy objects).
+2. **Scoped**: Recreated once per *request scope*. (Tied directly to an HTTP request or manually created scope).
+3. **Singleton**: Created *once* and lives for the entire application life cycle. (Impossible to refresh without restarts or complex factory wrappers).
+
+### What standard .NET DI is missing:
+* **No Cache-Like Timed Lifetimes:** You cannot configure a service to live for 10 minutes, expire, and automatically recreate on the next resolution (e.g., self-refreshing API clients, currency converters, or configuration readers).
+* **No Contextual/Conditional Lifetimes:** You cannot resolve one instance or destroy/recreate instances dynamically based on runtime changes, tenant context, database state, or feature flags.
+* **Synchronous-Only Resolution:** Built-in `IServiceProvider` resolves everything synchronously (`GetService<T>`). Resolving services that require asynchronous initialization or remote fetching usually forces developers into dangerous sync-over-async (`.GetAwaiter().GetResult()`) anti-patterns.
+
+**LifeTimes** bridges these gaps by adding **Timed** and **Conditional** lifetimes with a fully **asynchronous resolution engine** (`GetServiceAsync<T>`).
+
+---
+
+## 📊 Comparison Table
+
+| Lifetime | Default .NET DI | `Kanaka.LifeTimes` | Lifecycle Behavior | Primary Use Case |
+|---|---|---|---|---|
+| **Transient** | ✅ Yes | ✅ Yes (Standard) | Recreated every time it is resolved. | Stateless utility services. |
+| **Scoped** | ✅ Yes | ✅ Yes (Standard) | Bound to an HTTP request or boundary scope. | Database contexts (like EF Core `DbContext`). |
+| **Singleton** | ✅ Yes | ✅ Yes (Standard) | Created once and lives forever. | Loggers, immutable configuration. |
+| **Timed** 🆕 | ❌ No | ✅ **Yes** | Persists for a specified duration, then automatically disposes and recreates on next resolve. | Temporary caches, currency exchanges, OAuth access tokens. |
+| **Conditional** 🆕 | ❌ No | ✅ **Yes** | Recreated or disposed dynamically based on a custom condition evaluation. | Feature-flagged services, context-based tenants, connection switches. |
+
+---
 
 ## 🔨 Installation
 
-LifeTimes is available on [NuGet](https://www.nuget.org/packages/Kanaka.LifeTimes).
+Install the package via the .NET CLI:
 
-```text
+```bash
 dotnet add package Kanaka.LifeTimes
-```
-
-## 🧩 Usage
-
-The following code demonstrates basic usage of LifeTimes. For a full tutorial see sample [Web](https://github.com/KanakaSoftware/LifeTimes/blob/main/examples/Web) project in the repository.
-
-```csharp
-ServiceCollection services = new();
-services
-    .AddLifeTime((p, o) =>
-        {
-            o.AddTimed<CurrencyService>(p, TimeSpan.FromMinutes(10));
-            o.AddConditional<TokenService>(p);
-        }
-    );
-using ServiceProvider provider = services.BuildServiceProvider();
-var lifetime = provider.GetService<ILifeTime>();
-var currencyService = await lifetime.GetServiceAsync<CurrencyService>();
-var rate = currencyService.GetRate("INR");
-var tokenService = await lifetime.GetServiceAsync<TokenService>();
-var token = tokenService.GetToken();
-
-class CurrencyService
-{
-    private readonly Dictionary<string, decimal> _rates = new();
-
-    public CurrencyService()
-    {
-        // initialize/update _rates
-    }
-
-    public decimal GetRate(string currency)
-    {
-        return _rates.GetValueOrDefault(currency);
-    }
-}
-
-class TokenService : IConditional
-{
-    private readonly string token = string.Empty;
-    public string GetToken()
-    {
-        return token;
-    }
-
-    public ValueTask<bool> ConditionAsync(CancellationToken cancellationToken)
-    {
-        var expired = false; // check token expire, for demonstration it's set to false
-        return ValueTask.FromResult<bool>(expired);
-    }
-}
 ```
 
 ## 🏗️ Working Detail
